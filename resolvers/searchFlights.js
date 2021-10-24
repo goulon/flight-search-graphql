@@ -1,6 +1,7 @@
 const { getFlightsFromModel } = require('../models/Flight/Flight');
 const { BookableFlight } = require('../models/BookableFlight/BookableFlight');
 const DataLoader = require('dataloader');
+const { LRUMap } = require('lru_map');
 
 // checkRequiredArguments returns an object to validate whether the endpoint received
 // invalid required arguments. It contains a validation status and an error message.
@@ -66,6 +67,8 @@ const flightLoader = new DataLoader(keys => {
     [originCode, destinationCode, departureDate, passengerCount] = keys[0].split('_');
     return await getFlightsFromModel({ originCode, destinationCode, departureDate, passengerCount });
   });
+}, {
+  cacheMap: new LRUMap(10)
 })
 
 // lookupReturnFlights returns an object containing two lists of Flights.
@@ -86,6 +89,8 @@ const bookableFlightLoader = new DataLoader(keys => {
     const returnFlights = await lookupReturnFlights({ originCode, destinationCode, departureDate, returnDate, passengerCount })
     return matchCompatibleFlights(returnFlights);
   })
+}, {
+  cacheMap: new LRUMap(20)
 })
 
 // getBookableFlights returns either a BookableFlight list of compatible 
