@@ -56,11 +56,11 @@ const batchFunction = async (keys, callback) => {
   return keys.map(key => resultsByKeys[key] || new Error(`No result for ${key}`));
 }
 
-// getLookupKeys returns concatenated lookup variables into into one string.
+// getLookupKeys returns concatenated lookup variables into one string.
 const getLookupKeys = keys => keys.join('_');
 
-// flightLoader returns a promise which resolves to an Array of Flights or an Error instance.
-// This array is mapped to the lookup keys for one-way flights, each key containing the airports codes, the travel date, pax count.
+// flightLoader is a DataLoader that returns an Array of one-way Flights.
+// This array is mapped to the query lookup keys, each key containing the airports codes, the travel date, pax count.
 const flightLoader = new DataLoader(keys => {
   return batchFunction(keys, async (keys) => {
     [originCode, destinationCode, departureDate, passengerCount] = keys[0].split('_');
@@ -72,14 +72,14 @@ const flightLoader = new DataLoader(keys => {
 // One for all the departing Flights, another for all the returning Flights. 
 const lookupReturnFlights = async (lookupParams) => {
   const { originCode, destinationCode, departureDate, returnDate, passengerCount } = lookupParams;
-  // Calling DataLoader.load() once with a given key fetches and caches data to eliminate redundant loads.
+  // Calling flightLoader.load() once with a given key fetches and caches data to eliminate redundant loads.
   const outboundFlights = await flightLoader.load(getLookupKeys([originCode, destinationCode, departureDate, passengerCount]));
   const inboundFlights = await flightLoader.load(getLookupKeys([destinationCode, originCode, returnDate, passengerCount]));
   return { outboundFlights, inboundFlights };
 }
 
-// bookableFlightLoader returns a promise which resolves to an Array of BookableFlights or an Error instance.
-// This array is mapped to the search params, each key containing the airports codes, both travel dates, and pax count.
+// bookableFlightLoader is a DataLoader that returns an Array of BookableFlights, representing return trips.
+// This array is mapped to the search params containing the airports codes, both travel dates, and pax count.
 const bookableFlightLoader = new DataLoader(keys => {
   return batchFunction(keys, async (keys) => {
     [originCode, destinationCode, departureDate, returnDate, passengerCount] = keys[0].split('_');
@@ -96,7 +96,7 @@ const getBookableFlights = async ({ originCode, destinationCode, departureDate, 
     console.log('requiredArguments: ', requiredArguments)
     return new Error(requiredArguments.errorMessage);
   } else {
-    // Calling DataLoader.load() once with a given key fetches and caches data to eliminate redundant loads.
+    // Calling bookableFlightLoader.load() once with a given key fetches and caches data to eliminate redundant loads.
     const bookableFlights = await bookableFlightLoader.load(getLookupKeys([originCode, destinationCode, departureDate, returnDate, passengerCount]));
     // Pagination happens here. We only return the first results, with the selected offset.
     if (first < 0) return new Error('first should be a positive number of flights.');
