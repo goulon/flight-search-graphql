@@ -98,6 +98,7 @@ const getFlightsFromModel = async (queryParams) => {
 }
 
 module.exports = {
+  Flight,
   readFlightTransferObject,
   getFlightBookableTimes,
   getFlightsFromModel,
