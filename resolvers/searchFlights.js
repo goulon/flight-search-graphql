@@ -36,7 +36,7 @@ const matchCompatibleFlights = ({ outboundFlights, inboundFlights }) => {
   const bookableFlightsList = [];
   // For each flight, we first check if the traveler can get on the return 
   // flight, in case its departure is close to the arrival time of the first leg.
-  console.log(`Query result: ${outboundFlights.length} outbound flights and ${inboundFlights.length} inbound flights.`);
+  console.log(`↳ Matching ${outboundFlights.length} outbound flights with ${inboundFlights.length} inbound flights.`);
   outboundFlights.forEach((outbound) => {
     inboundFlights.forEach((inbound) => {
       if (BookableFlight.canGetOnReturnFlight(outbound, inbound)) {
@@ -72,12 +72,21 @@ const flightLoader = new DataLoader(keys => {
 // One for all the departing Flights, another for all the returning Flights. 
 const lookupReturnFlights = async (lookupParams) => {
   const { originCode, destinationCode, departureDate, returnDate, passengerCount } = lookupParams;
-  console.log(`Querying: ${originCode} to ${destinationCode}. Departure on ${departureDate} and return on ${returnDate} for ${passengerCount} passengers.`);
   // Calling DataLoader.load() once with a given key fetches and caches data to eliminate redundant loads.
   const outboundFlights = await flightLoader.load(getLookupKeys([originCode, destinationCode, departureDate, passengerCount]));
   const inboundFlights = await flightLoader.load(getLookupKeys([destinationCode, originCode, returnDate, passengerCount]));
   return { outboundFlights, inboundFlights };
 }
+
+// bookableFlightLoader returns a promise which resolves to an Array of BookableFlights or an Error instance.
+// This array is mapped to the search params, each key containing the airports codes, both travel dates, and pax count.
+const bookableFlightLoader = new DataLoader(keys => {
+  return batchFunction(keys, async (keys) => {
+    [originCode, destinationCode, departureDate, returnDate, passengerCount] = keys[0].split('_');
+    const returnFlights = await lookupReturnFlights({ originCode, destinationCode, departureDate, returnDate, passengerCount })
+    return matchCompatibleFlights(returnFlights);
+  })
+})
 
 // getBookableFlights returns either a BookableFlight list of compatible 
 // flights by computing compatible flights or an Error to the GraphQL resolver.
@@ -87,7 +96,8 @@ const getBookableFlights = async ({ originCode, destinationCode, departureDate, 
     console.log('requiredArguments: ', requiredArguments)
     return new Error(requiredArguments.errorMessage);
   } else {
-    const bookableFlights = matchCompatibleFlights(await lookupReturnFlights({ originCode, destinationCode, departureDate, returnDate, passengerCount }));
+    // Calling DataLoader.load() once with a given key fetches and caches data to eliminate redundant loads.
+    const bookableFlights = await bookableFlightLoader.load(getLookupKeys([originCode, destinationCode, departureDate, returnDate, passengerCount]));
     // Pagination happens here. We only return the first results, with the selected offset.
     if (first < 0) return new Error('first should be a positive number of flights.');
     if (offset < 0) return new Error('offset should be a positive number of paginated flights.');
