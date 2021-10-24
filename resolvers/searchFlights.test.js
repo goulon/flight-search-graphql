@@ -90,7 +90,7 @@ test('Bookable flights list gets a list given two flights lists', async () => {
   expect(Array.isArray(bookableFlights)).toBe(true);
 })
 
-test('Return light lookup receives two flight lists', async () => {
+test('Return flight lookup receives two flight lists', async () => {
   const mockupArgs = {
     originCode: 'MIA',
     destinationCode: 'LAX',
@@ -104,7 +104,7 @@ test('Return light lookup receives two flight lists', async () => {
   expect(Array.isArray(flightLists.inboundFlights)).toBe(true);
 })
 
-test('Flight search arguments receives a bookable flights list', async () => {
+test('Flight search arguments match a bookable flights list', async () => {
   const mockupArgs = {
     originCode: 'MIA',
     destinationCode: 'LAX',

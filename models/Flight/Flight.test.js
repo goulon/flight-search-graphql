@@ -33,7 +33,7 @@ test('Flight Transfer Object has flight date, time and length', () => {
   expect(typeof flightTransferObject.flightLength).toEqual('string');
 })
 
-test('Flight model read an list of Flights', async () => {
+test('Flight model reads a list of Flights', async () => {
   const lookupArgs = {
     originCode: 'ABC',
     destinationCode: 'XYZ',

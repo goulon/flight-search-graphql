@@ -1,6 +1,6 @@
 const { BookableFlight } = require('./BookableFlight');
 
-test('BookableFlight instance has four keys', () => {
+test('BookableFlight instance has four attributes', () => {
   const mockupFlightA = {
     'departureDatetime': new Date(),
     'durationInMin': 60,
@@ -17,7 +17,7 @@ test('BookableFlight instance has four keys', () => {
   expect(Object.keys(bookableFlights).length).toEqual(4);
 })
 
-test('BookableFlight instance keys have valid value types', () => {
+test('BookableFlight instance attributes have valid value types', () => {
   const mockupFlightA = {
     'departureDatetime': new Date(),
     'durationInMin': 60,
