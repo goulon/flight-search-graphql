@@ -70,7 +70,6 @@ const getFlightsFromModel = async (queryParams) => {
   const { originCode, destinationCode, departureDate, passengerCount } = queryParams;
   console.log({ originCode, destinationCode, departureDate, passengerCount })
   const { latestTime, earliestTime } = getFlightBookableTimes(new Date(departureDate));
-  console.log({ latestTime, earliestTime })
   const flightList = await Flight.findAll({
     attributes: [
       'originCode', 'destinationCode', 'departureDatetime',
