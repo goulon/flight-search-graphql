@@ -49,25 +49,31 @@ const matchCompatibleFlights = ({ outboundFlights, inboundFlights }) => {
   return bookableFlightsList;
 }
 
-// batchGetFlights returns a promise which resolves to an Array of Flights or an Error instance.
-// This array is mapped to the lookup keys, each key containing the search values (airports codes, travel date, pax count).
-const batchGetFlights = async (keys) => {
-  [originCode, destinationCode, departureDate, passengerCount] = keys[0].split('_');
+// batchFunction returns a promise which resolves to an Array of values or an Error instance.
+const batchFunction = async (keys, callback) => {
   const resultsByKeys = {};
-  resultsByKeys[keys] = await getFlightsFromModel({ originCode, destinationCode, departureDate, passengerCount });
+  resultsByKeys[keys] = await callback(keys);
   return keys.map(key => resultsByKeys[key] || new Error(`No result for ${key}`));
 }
+
+// getLookupKeys returns concatenated lookup variables into into one string.
+const getLookupKeys = keys => keys.join('_');
+
+// flightLoader returns a promise which resolves to an Array of Flights or an Error instance.
+// This array is mapped to the lookup keys for one-way flights, each key containing the airports codes, the travel date, pax count.
+const flightLoader = new DataLoader(keys => {
+  return batchFunction(keys, async (keys) => {
+    [originCode, destinationCode, departureDate, passengerCount] = keys[0].split('_');
+    return await getFlightsFromModel({ originCode, destinationCode, departureDate, passengerCount });
+  });
+})
 
 // lookupReturnFlights returns an object containing two lists of Flights.
 // One for all the departing Flights, another for all the returning Flights. 
 const lookupReturnFlights = async (lookupParams) => {
   const { originCode, destinationCode, departureDate, returnDate, passengerCount } = lookupParams;
-  console.log(`Query: ${originCode} to ${destinationCode}. Departure on ${departureDate} and return on ${returnDate} for ${passengerCount} passengers.`);
-  // getLookupKeys concatenates the query variables into into one string.
-  const getLookupKeys = (keys => keys.join('_'));
-  // flightLoader is a DataLoader used for the data fetching layer. Calling .load()
-  // once with a given key caches the result to eliminate redundant loads.
-  const flightLoader = new DataLoader(keys => batchGetFlights(keys));
+  console.log(`Querying: ${originCode} to ${destinationCode}. Departure on ${departureDate} and return on ${returnDate} for ${passengerCount} passengers.`);
+  // Calling DataLoader.load() once with a given key fetches and caches data to eliminate redundant loads.
   const outboundFlights = await flightLoader.load(getLookupKeys([originCode, destinationCode, departureDate, passengerCount]));
   const inboundFlights = await flightLoader.load(getLookupKeys([destinationCode, originCode, returnDate, passengerCount]));
   return { outboundFlights, inboundFlights };
